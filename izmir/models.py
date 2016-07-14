@@ -79,9 +79,13 @@ class Route(models.Model):
     )
 
     departure_times = ArrayField(
-        models.TimeField(
-            null=False,
-            blank=False
+        ArrayField(
+            models.TimeField(
+                null=False,
+                blank=False
+            ),
+            null=True,
+            default=[]
         ),
         default=[],
         size=6,

@@ -1,50 +1,34 @@
 from rest_framework import serializers
+from . import models
 
-class StopSerializer(serializers.Serializer):
-    """
-    Always base version.
-    No reduction will be applied.
-    """
-    code = serializers.IntegerField()
-    routes = serializers.ListField(
-        child=serializers.IntegerField()
-    )
-    coor = serializers.ListField(
-        child=serializers.IntegerField()
-    )
-
-class StopListSerializer(serializers.Serializer):
-    """
-    A serializer to list search queries for stops.
-
-    Always base version.
-    No reduction will be applied.
-    """
-    stops = serializers.ListField(
-        child=serializers.IntegerField()
-    )
-
-class RouteSerializer(serializers.Serializer):
+class StopSerializer(serializers.ModelSerializer):
     """
     Always base version.
     No reduction will be applied.
     """
 
-    code = serializers.IntegerField()
-    stops = serializers.ListField(
-        child=serializers.IntegerField()
-    )
+    class Meta:
+        model = models.Stop
+        fields = (
+            "code",
+            "label",
+            "coor"
+        )
 
-class RouteListSerializer(serializers.Serializer):
+class RouteSerializer(serializers.ModelSerializer):
     """
-    A serializer to list search queries for buses.
-
     Always base version.
     No reduction will be applied.
     """
-    routes = serializers.ListField(
-        child=serializers.IntegerField()
-    )
+
+    class Meta:
+        model = models.Route
+        fields = (
+            "code",
+            "terminals",
+            "stops",
+            "departure_times"
+        )
 
 class RemainingSerializer:
     class v1(serializers.Serializer):

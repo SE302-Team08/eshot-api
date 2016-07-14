@@ -64,6 +64,11 @@ LOGGING = {
             'handlers': ['streamer', 'mirror', 'tracker'],
             'level': 'DEBUG',
             'propagate': True,
+        },
+        'scripts.update_routes': {
+            'handlers': ['streamer', 'mirror', 'tracker'],
+            'level': 'DEBUG',
+            'propagate': True,
         }
     },
 }
