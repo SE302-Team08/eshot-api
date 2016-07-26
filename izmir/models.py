@@ -59,12 +59,22 @@ class Route(models.Model):
         verbose_name="Code"
     )
 
-    stops = models.ManyToManyField(
-        Stop,
-        null=True,
-        blank=True,
-        related_name="routes",
-        verbose_name="Stops"
+    # stops = models.ManyToManyField(
+    #     Stop,
+    #     null=True,
+    #     blank=True,
+    #     through="RouteStop",
+    #     related_name="routes",
+    #     verbose_name="Stops"
+    # )
+
+    stops = ArrayField(
+        ArrayField(
+            models.PositiveIntegerField(),
+            size=2
+        ),
+        default=[],
+        verbose_name="Stops (Ordered)"
     )
 
     terminals = ArrayField(
@@ -99,3 +109,12 @@ class Route(models.Model):
 
     def __str__(self):
         return "{}: {} - {}".format(str(self.code), self.terminals[0], self.terminals[1])
+
+# # http://stackoverflow.com/a/38491369/2926992
+# class RouteStop(models.Model):
+#     stop = models.ForeignKey(Stop)
+#     route = models.ForeignKey(Route)
+#     position = models.PositiveSmallIntegerField()
+#
+#     class Meta:
+#         unique_together = (("stop", "route"))
