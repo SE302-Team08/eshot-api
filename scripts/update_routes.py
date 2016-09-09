@@ -2,6 +2,9 @@
 A script updating routes.
 """
 
+from django.conf import settings
+from izmir import models
+
 import logging, re, sys
 from . import colorize
 from datetime import datetime
@@ -10,7 +13,6 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from bs4 import BeautifulSoup
-from izmir import models
 from scripts import Timer
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,8 @@ def run():
     profile = webdriver.FirefoxProfile()
 
     profile.add_extension("quickjava-2.0.8-fx.xpi")
-    profile.set_preference("thatoneguydotnet.QuickJava.curVersion", "2.0.8")  ## Prevents loading the 'thank you for installing screen'
+    profile.set_preference("thatoneguydotnet.QuickJava.curVersion",
+                           "2.0.8")  ## Prevents loading the 'thank you for installing screen'
     profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.Images", 2)  ## Turns images off
     profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.AnimatedImage", 2)  ## Turns animated images off
 
@@ -57,7 +60,8 @@ def run():
     profile.set_preference("browser.pocket.enabled", False)  # Duck pocket too!
     profile.set_preference("loop.enabled", False)
     profile.set_preference("browser.chrome.toolbar_style", 1)  # Text on Toolbar instead of icons
-    profile.set_preference("browser.display.show_image_placeholders", False)  # Don't show thumbnails on not loaded images.
+    profile.set_preference("browser.display.show_image_placeholders",
+                           False)  # Don't show thumbnails on not loaded images.
     profile.set_preference("browser.display.use_document_colors", False)  # Don't show document colors.
     profile.set_preference("browser.display.use_document_fonts", 0)  # Don't load document fonts.
     profile.set_preference("browser.display.use_system_colors", True)  # Use system colors.
