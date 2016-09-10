@@ -68,13 +68,22 @@ class Route(models.Model):
     #     verbose_name="Stops"
     # )
 
-    stops = ArrayField(
+    stops_forwards = ArrayField(
         ArrayField(
             models.PositiveIntegerField(),
             size=2
         ),
         default=[],
-        verbose_name="Stops (Ordered)"
+        verbose_name="Stops Forwards (Ordered)"
+    )
+
+    stops_backwards = ArrayField(
+        ArrayField(
+            models.PositiveIntegerField(),
+            size=2
+        ),
+        default=[],
+        verbose_name="Stops Backwards (Ordered)"
     )
 
     terminals = ArrayField(
@@ -88,7 +97,7 @@ class Route(models.Model):
         verbose_name="Terminals"
     )
 
-    departure_times = ArrayField(
+    departure_times_forwards = ArrayField(
         ArrayField(
             models.TimeField(
                 null=False,
@@ -99,7 +108,21 @@ class Route(models.Model):
         ),
         default=[],
         size=6,
-        verbose_name="Departure Times"
+        verbose_name="Departure Times (Forwards)"
+    )
+
+    departure_times_backwards = ArrayField(
+        ArrayField(
+            models.TimeField(
+                null=False,
+                blank=False
+            ),
+            null=True,
+            default=[]
+        ),
+        default=[],
+        size=6,
+        verbose_name="Departure Times (Backwards)"
     )
 
     class Meta:

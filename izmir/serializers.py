@@ -26,8 +26,10 @@ class RouteSerializer(serializers.ModelSerializer):
         fields = (
             "code",
             "terminals",
-            "stops",
-            "departure_times"
+            "stops_forwards",
+            "stops_backwards",
+            "departure_times_forwards",
+            "departure_times_backwards"
         )
 
 class RemainingSerializer:
@@ -37,6 +39,8 @@ class RemainingSerializer:
         Version: 1.x
         """
         code = serializers.IntegerField()
-        routes = serializers.DictField(
-            child=serializers.IntegerField()
+        routes = serializers.ListField(
+            child=serializers.ListField(
+                child=serializers.IntegerField()
+            )
         )
