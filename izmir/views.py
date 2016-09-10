@@ -36,7 +36,10 @@ class StopView:
     """
     class v1(APIView):
         """
-        Version: 1.x
+        Listing Stops
+
+        GET
+        q:int|str - Getting ID or searching at labels.
         """
         versioning_class = Versions.v1
         model = models.Stop
@@ -72,7 +75,9 @@ class StopView:
 class RouteView:
     class v1(APIView):
         """
-        Version: 1.x
+        Listing Routes/Buses
+
+        q:int|str - Getting ID or searching at terminal labels.
         """
 
         versioning_class = Versions.v1
@@ -109,7 +114,13 @@ class RouteView:
 class RemainingView:
     class v1(APIView):
         """
-        Version: v1
+        Remaining Stops at A Stop
+
+        PATH
+        code:int - Stop ID
+
+        GET
+        r:int = 0 - Route goes forward or comes back?
         """
 
         versioning_class=Versions.v1

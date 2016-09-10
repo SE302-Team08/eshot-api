@@ -11,6 +11,7 @@ MIDDLEWARE_CLASSES += INDEPENDENT_MIDDLEWARES + DEPENDENT_MIDDLEWARES
 # Apps
 INDEPENDENT_APPS = [
     "rest_framework",
+    "rest_framework_docs",
     "django_extensions"
 ]
 
