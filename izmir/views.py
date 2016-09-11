@@ -6,8 +6,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 
 import re, redis, json, logging, requests
-from dateutil import parser
-from datetime import datetime
 from bs4 import BeautifulSoup
 from random import choice
 
@@ -23,13 +21,35 @@ if settings.DEBUG:
 else:
     FORMAT="json"
 
-class Versions(URLPathVersioning):
+class Versions:
     class v1(URLPathVersioning):
         default_version = "1.0"
         allowed_versions = ["1.0"]
 
 
 # Create your views here.
+class APIStatusView:
+    class v1(APIView):
+        """
+        Responding API status.
+        """
+
+        versioning_class = Versions.v1
+
+        def get(self, request, format=FORMAT):
+            data = {
+                "is_api_available": "available",
+                "version": "v1",
+                "expiration": settings.API_EXPIRES["v1"],
+                "messages": []
+            }
+
+            res = requests.get("http://www.eshot.gov.tr/tr/OtobusumNerede/290")
+
+            data["is_eshot_available"] = "available" if res.status_code == 200 else "unavailable"
+
+            return Response(data)
+
 class StopView:
     """
     Listing stops.
@@ -38,78 +58,66 @@ class StopView:
         """
         Listing Stops
 
-        GET
-        q:int|str - Getting ID or searching at labels.
+        PATH
+        code - Getting ID or searching at labels.
         """
         versioning_class = Versions.v1
         model = models.Stop
         serializer = serializers.StopSerializer
 
-        def get(self, request, format=FORMAT):
+        def get(self, request, code, format=FORMAT):
             """
-            q:int|str - Query. If int, return particular stop having code, else return particular stops containing label.
+            code:int - Query. If int, return particular stop having code, else return particular stops containing label.
             """
-            q = request.GET.get("q")
-            is_code = False
 
-            if q and re.search("^[0-9]+$", q):
-                is_code = True
+            # q = request.GET.get("q")
+            # Now changed to path. Name is the same.
+            # To be removed in v0.2
 
-            if is_code:
+            q = code
+
+            try:
                 q = int(q)
-                try:
-                    obj = self.model.objects.get(code=q)
-                except self.model.DoesNotExist:
-                    return Response(status=204)
-                serializer = self.serializer(obj)
-                return Response(serializer.data)
-            else:
-                if not q:
-                    return Response(status=400)
-                objs = self.model.objects.filter(label__icontains=q)
-                if not objs.exists():
-                    return Response(status=204)
-                serializer = self.serializer(objs, many=True)
-                return Response(serializer.data)
+            except ValueError:
+                raise Response(status=400)
+
+            try:
+                obj = self.model.objects.get(code=q)
+            except self.model.DoesNotExist:
+                return Response(status=204)
+
+            serializer = self.serializer(obj)
+            return Response(serializer.data)
 
 class RouteView:
     class v1(APIView):
         """
         Listing Routes/Buses
 
-        q:int|str - Getting ID or searching at terminal labels.
+        PATH
+        code:int - Getting ID or searching at terminal labels.
         """
 
         versioning_class = Versions.v1
         model = models.Route
         serializer = serializers.RouteSerializer
 
-        def get(self, request, format=FORMAT):
+        def get(self, request, code, format=FORMAT):
             """
-            q:int|str - Query. If int, return particular route having code, else return particular routes containing label.
+            code:int - Query. If int, return particular route having code, else return particular routes containing label.
             """
-            q = request.GET.get("q")
-            is_code = False
 
-            if q and re.search("^[0-9]+$", q):
-                is_code = True
+            # look@StopView.v1
+            q = code
+            q = int(q)
 
-            if is_code:
-                q = int(q)
-                try:
-                    obj = self.model.objects.get(code=q)
-                except self.model.DoesNotExist:
-                    return Response(status=204)
-                serializer = self.serializer(obj)
-                return Response(serializer.data)
-            else:
-                if not q:
-                    return Response(status=400)
-                objs = self.model.objects.filter(terminals__icontains=[q])
-                if not objs.exists():
-                    return Response(status=204)
-                serializer = self.serializer(objs, many=True)
-                return Response(serializer.data)
+            try:
+                obj = self.model.objects.get(code=q)
+            except self.model.DoesNotExist:
+                return Response(status=204)
+
+            serializer = self.serializer(obj)
+            return Response(serializer.data)
 
 class RemainingView:
     class v1(APIView):
@@ -234,3 +242,59 @@ class RemainingView:
             if serializer.is_valid():
                 ram.setex(str(stop.code)+"_"+str(towards), settings.POLITE_REQ_LIMIT, json.dumps(r_list)) # Expires in 90 Seconds
                 return Response(serializer.data)
+
+class StopSearchView:
+    class v1(APIView):
+        versioning_class = Versions.v1
+        model = models.Stop
+        serializer = serializers.StopSearchSerializer.v1
+
+        def get(self, request, format=FORMAT):
+            """
+            Searching Stops
+
+            GET
+            q:str - Query String
+            """
+
+            q = request.GET.get("q")
+
+            if q is None:
+                return Response(status=400)
+
+            stops = self.model.objects.filter(label__icontains=q)
+
+            if len(stops) == 0:
+                return Response(status=204)
+
+            serializer = self.serializer(stops, many=True)
+
+            return Response(serializer.data)
+
+class RouteSearchView:
+    class v1(APIView):
+        versioning_class = Versions.v1
+        model = models.Route
+        serializer = serializers.RouteSearchSerializer.v1
+
+        def get(self, request, format=FORMAT):
+            """
+            Searching Routes
+
+            GET
+            q:str - Query String
+            """
+
+            q = request.GET.get("q")
+
+            if q is None:
+                return Response(status=400)
+
+            routes = self.model.objects.filter(terminals__icontains=q)
+
+            if len(routes) == 0:
+                return Response(status=204)
+
+            serializer = self.serializer(routes, many=True)
+
+            return Response(serializer.data)

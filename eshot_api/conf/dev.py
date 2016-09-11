@@ -1,5 +1,5 @@
 from eshot_api.settings import *
-from selenium import webdriver
+from datetime import date
 import json
 
 # Middlewares
@@ -98,3 +98,7 @@ USER_AGENTS = [
 ]
 
 POLITE_REQ_LIMIT = 90
+
+API_EXPIRES = {
+    "v1": date(2016, 12, 31)
+}

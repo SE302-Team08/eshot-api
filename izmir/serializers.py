@@ -44,3 +44,25 @@ class RemainingSerializer:
                 child=serializers.IntegerField()
             )
         )
+
+class RouteSearchSerializer:
+    class v1(serializers.ModelSerializer):
+        """
+        Searching Routes
+        Version: 1.x
+        """
+
+        class Meta:
+            model = models.Route
+            fields = ["code", "terminals"]
+
+class StopSearchSerializer:
+    class v1(serializers.ModelSerializer):
+        """
+        Searching Stops
+        Version: 1.x
+        """
+
+        class Meta:
+            model = models.Stop
+            fields = ["code", "label"]
