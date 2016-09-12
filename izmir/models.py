@@ -141,3 +141,27 @@ class Route(models.Model):
 #
 #     class Meta:
 #         unique_together = (("stop", "route"))
+
+class Announcement(models.Model):
+    title = models.CharField(
+        null=False,
+        blank=False,
+        max_length=512,
+        verbose_name="Title"
+    )
+
+    content = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name="Content"
+    )
+
+    is_eshot = models.BooleanField(
+        default=True
+    )
+
+    expiration = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "Announcement"
+        verbose_name_plural = "Announcements"

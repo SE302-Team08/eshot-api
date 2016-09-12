@@ -1,24 +1,13 @@
-"""
-A script updating routes.
-"""
+import logging, requests, re
 
+from bs4 import BeautifulSoup
+from random import choice
 from django.conf import settings
+
+from . import colorize
 from izmir import models
 
-import logging, re, sys
-from . import colorize
-from datetime import datetime
-from statistics import mean
-from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
-from bs4 import BeautifulSoup
-from scripts import Timer
-
 logger = logging.getLogger(__name__)
-
-POLITENESS_LIMIT = 2
-URL = "http://www.eshot.gov.tr/tr/UlasimSaatleri/288"
 
 # My Solution: http://stackoverflow.com/a/38362458/2926992
 def equalizer(data):
@@ -35,168 +24,187 @@ def equalizer(data):
 
     return data
 
+def midnight_formatter(time_str):
+    """
+    Used for formatting 24 to 00 as hours.
+    Will be used with map.
+    :param time_str:
+    :return:
+    """
+
+    if time_str == None:
+        return None
+
+    if time_str[:2] == "24":
+        time_str_list = list(time_str)
+        time_str_list[0] = "0"
+        time_str_list[1] = "0"
+        time_str = "".join(time_str_list)
+
+    return time_str
+
 def run():
-    profile = webdriver.FirefoxProfile()
+    logger.info("Initializing Route Updating Script")
 
-    profile.add_extension("quickjava-2.0.8-fx.xpi")
-    profile.set_preference("thatoneguydotnet.QuickJava.curVersion",
-                           "2.0.8")  ## Prevents loading the 'thank you for installing screen'
-    profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.Images", 2)  ## Turns images off
-    profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.AnimatedImage", 2)  ## Turns animated images off
+    logger.info("Requestion main URL to get route list.")
+    res = requests.get("http://www.eshot.gov.tr/tr/UlasimSaatleri/288")
+    r_elms = BeautifulSoup(res.content, "html.parser")\
+        .find("select", {"class":"chosen-select"})\
+        .find_all("option")
 
-    profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.Flash", 2)  ## Flash
-    profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.Java", 2)  ## Java
-    profile.set_preference("thatoneguydotnet.QuickJava.startupStatus.Silverlight", 2)
+    # Requesting All Routes
+    logger.info("Starting to request individual route elements.")
+    for i, elm in enumerate(r_elms):
+        # Initial Information
+        r_dict = {
+            "code": int(elm["value"])
+        }
 
-    profile.set_preference("network.http.pipelining", True)
-    profile.set_preference("network.http.proxy.pipelining", True)
-    profile.set_preference("network.http.pipelining.maxrequests", 8)
-    profile.set_preference("content.notify.interval", 500000)
-    profile.set_preference("content.notify.ontimer", True)
-    profile.set_preference("content.switch.threshold", 250000)
-    profile.set_preference("browser.cache.memory.capacity", 65536)  # Increase the cache capacity.
-    profile.set_preference("browser.startup.homepage", "about:blank")
-    profile.set_preference("reader.parse-on-load.enabled", False)  # Disable reader, we won't need that.
-    profile.set_preference("browser.pocket.enabled", False)  # Duck pocket too!
-    profile.set_preference("loop.enabled", False)
-    profile.set_preference("browser.chrome.toolbar_style", 1)  # Text on Toolbar instead of icons
-    profile.set_preference("browser.display.show_image_placeholders",
-                           False)  # Don't show thumbnails on not loaded images.
-    profile.set_preference("browser.display.use_document_colors", False)  # Don't show document colors.
-    profile.set_preference("browser.display.use_document_fonts", 0)  # Don't load document fonts.
-    profile.set_preference("browser.display.use_system_colors", True)  # Use system colors.
-    profile.set_preference("browser.formfill.enable", False)  # Autofill on forms disabled.
-    profile.set_preference("browser.helperApps.deleteTempFileOnExit", True)  # Delete temprorary files.
-    profile.set_preference("browser.shell.checkDefaultBrowser", False)
-    profile.set_preference("browser.startup.homepage", "about:blank")
-    profile.set_preference("browser.startup.page", 0)  # blank
-    profile.set_preference("browser.tabs.forceHide", True)  # Disable tabs, We won't need that.
-    profile.set_preference("browser.urlbar.autoFill", False)  # Disable autofill on URL bar.
-    profile.set_preference("browser.urlbar.autocomplete.enabled", False)  # Disable autocomplete on URL bar.
-    profile.set_preference("browser.urlbar.showPopup", False)  # Disable list of URLs when typing on URL bar.
-    profile.set_preference("browser.urlbar.showSearch", False)  # Disable search bar.
-    profile.set_preference("extensions.checkCompatibility", False)  # Addon update disabled
-    profile.set_preference("extensions.checkUpdateSecurity", False)
-    profile.set_preference("extensions.update.autoUpdateEnabled", False)
-    profile.set_preference("extensions.update.enabled", False)
-    profile.set_preference("general.startup.browser", False)
-    profile.set_preference("plugin.default_plugin_disabled", False)
-    profile.set_preference("permissions.default.image", 2)  # Image load disabled again
+        term_find = re.findall(": (.+)[ ]*-[ ]*(.+)", elm.getText())
+        terminals = [i.strip() for i in term_find[0]] # Formatting Terminal Strings, Might Have White-Space
+        r_dict["terminals"] = terminals
 
-    driver = webdriver.Firefox(profile)
-
-    try:
-        qc = 0 # Query Counter
-        times = list()
-
-        logger.info("Requesting main URL and parsing response data.")
-        driver.get(URL)
-
-        index = 0
-
-        logger.debug("Locating route elements.")
-        driver.find_element_by_css_selector(".chosen-single").click()
-        total_r_elms = len(driver.find_elements_by_css_selector(".chosen-results li"))
-
-        while index < total_r_elms:
-            timer = Timer()
-            timer.begin()
-
-            logger.info("Operation Index: {}/{}".format(str(index), str(total_r_elms)))
-            meta = dict()
-            if index > 0:
-                driver.find_element_by_css_selector(".chosen-single").click()
-            # driver.find_element_by_css_selector(".chosen-single").click()
-            r_elm = driver.find_element_by_css_selector(".chosen-results")
-            r_elm = r_elm.find_elements_by_css_selector("li")[index]
-
-            # Code and Terminals
-            logger.info("Parsing code and terminals.")
-            parser = re.findall("([0-9]+) : (.+)[ ]*-[ ]*(.+)", r_elm.text)[0]
-            meta["code"] = int(parser[0])
-            meta["terminals"] = [parser[1].strip(), parser[2].strip()]
-
-            logger.info("Current element code is {}".format(str(meta["code"])))
-
-            # Redirection
-            logger.info("Redirecting to current element page.")
-            r_elm.click()
-
-            # logger.debug("Waiting body to load.")
-            # WebDriverWait(driver, 15).until(
-            #     expected_conditions.presence_of_element_located(
-            #         driver.find_element_by_css_selector("body")
-            #     )
-            # )
-
-            # Time Table
-            logger.info("Parsing time table.")
-            t_elms = driver.find_elements_by_css_selector(".timescape")
-            table = list() # To insert time elements later.
-
-            for i, t in enumerate(t_elms):
-                logger.debug("Parsing timescape index {}".format(str(i)))
-
-                col = list()
-                rows = t.find_elements_by_css_selector("li")[1:]
-
-                for r in rows:
-                    d = datetime.strptime(r.text.strip(), "%H:%M") # Converting to datetime object each row
-                    col.append(d)
-
-                logger.debug("Pushing column to array.")
-                table.append(col)
-
-            table = equalizer(table)
-
-            meta["departure_times"] = table
-
-
-            # Relation Handler
-            logger.info("Handling stop-route relations.")
-            s_elms = driver.find_elements_by_css_selector(".transfer li")
-
-            i = 0
-            stops = list()
-            for s in s_elms:
-                code = int(s.get_attribute("id"))
-                logger.info("Relation {}:{}".format(str(meta["code"]), str(code)))
-                try:
-                    models.Stop.objects.get(code=code)
-                except models.Stop.DoesNotExist:
-                    logger.error("Stop<{}> could not be found in database. Try updating stops first, then routes.")
-                    sys.exit(1)
-                stops.append([i, code])
-                i+=1
-                qc+=1
-            meta["stops"] = stops
-            # Updating Object
-            logger.info("Updating Route<{}>".format(str(meta["code"])))
-
-            try:
-                obj = models.Route.objects.get(code=meta["code"])
-                logger.warn("Route found, deleting to reinitialize...")
-                obj.delete()
-                qc += 2
-            except models.Route.DoesNotExist:
-                pass
-
-            logger.info("Reinitializing Route<{}>".format(str(meta["code"])))
-            obj = models.Route.objects.create(**meta)
-            qc += 1
-
-            timer.end()
-            times.append(timer())
-
-            index+=1
-
-        logger.info("Update Routes Operation: {}/{}/{}/{}/{} | max/min/avr/ttl/qc".format(
-            str(max(times)),
-            str(min(times)),
-            str(mean(times)),
-            str(sum(times)),
-            str(qc)
+        logger.info("[{}/{}]: {}".format(
+            str(i),
+            str(len(r_elms) - 1),
+            elm["value"]
         ))
-    except Exception as e:
-        logger.error("{}@{}: {}".format(e.__class__.__name__, str(sys.exc_info()[-1].tb_lineno),str(e)))
-        driver.quit()
+
+        stops_forwards = list()
+        stops_backwards = list()
+
+        # Forward Information
+        logger.debug("Getting forward information for {}".format(str(r_dict["code"])))
+
+        res = requests.post(
+            "http://www.eshot.gov.tr/tr/UlasimSaatleri/288",
+            data={
+                "hatId": str(r_dict["code"]),
+                "hatYon": "0"
+            },
+            headers={
+                "Connection": "keep-alive",
+                "Cache-Contol": "max-age=0",
+                "Origin": "http://www.eshot.gov.tr",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": choice(settings.USER_AGENTS),
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Referer": "http://www.eshot.gov.tr/tr/OtobusumNerede/290",
+                "Accept-Encoding": "gzip, deflate, lzma",
+                "Accept-Language": "en-US,en;q=0.8",
+                "Cookie": "AspxAutoDetectCookieSupport=1; ASP.NET_SessionId=ur114gdsk4mg2l3fy5lqvga5"
+            }
+        )
+
+        ## Stops
+        logger.debug("Handling stops.")
+        s_elms = BeautifulSoup(res.content, "html.parser")\
+            .find("ul", {"class":"transfer"})\
+            .find_all("li")
+
+
+        for i, s in enumerate(s_elms):
+            logger.debug("Found relation of {} to {}.".format(
+                str(r_dict["code"]),
+                s["id"]
+            ))
+
+            stops_forwards.append([i, int(s["id"])])
+
+        ## Departure Times
+        logger.debug("Handling departure times.")
+        dt_elms = BeautifulSoup(res.content, "html.parser")\
+            .find_all("ul", {"class":"timescape"})
+        times = list() # Created to organize and equalize soon
+
+        for i, dt in enumerate(dt_elms):
+            table = [j.getText().strip() for j in dt.find_all("li")[1:]] # Getting Times
+            times.append(table)
+
+        times = equalizer(times) # Equalizes length
+
+        for i in range(len(times)): # Changing 24 to 00 in hours.
+            times[i] = list(map(midnight_formatter, times[i]))
+
+        departure_times_forwards = times[:] # Copies
+
+        # Backward Information
+        logger.debug("Getting backwards information for {}".format(str(r_dict["code"])))
+
+        res = requests.post(
+            "http://www.eshot.gov.tr/tr/UlasimSaatleri/288",
+            data={
+                "hatId": str(r_dict["code"]),
+                "hatYon": "1"
+            },
+            headers={
+                "Connection": "keep-alive",
+                "Cache-Contol": "max-age=0",
+                "Origin": "http://www.eshot.gov.tr",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": choice(settings.USER_AGENTS),
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Referer": "http://www.eshot.gov.tr/tr/OtobusumNerede/290",
+                "Accept-Encoding": "gzip, deflate, lzma",
+                "Accept-Language": "en-US,en;q=0.8",
+                "Cookie": "AspxAutoDetectCookieSupport=1; ASP.NET_SessionId=ur114gdsk4mg2l3fy5lqvga5"
+            }
+        )
+
+        soup = BeautifulSoup(res.content, "html.parser")
+
+        ## Stops
+        logger.debug("Handling stops.")
+        s_elms = soup\
+            .find("ul", {"class": "transfer"}) \
+            .find_all("li")
+
+        for i, s in enumerate(s_elms):
+            logger.debug("Found relation of {} to {}.".format(
+                str(r_dict["code"]),
+                s["id"]
+            ))
+
+            stops_backwards.append([i, int(s["id"])])
+
+        ## Departure Times
+        logger.debug("Handling departure times.")
+        dt_elms = soup\
+            .find_all("ul", {"class": "timescape"})
+        print(len(dt_elms))
+        times = list()  # Created to organize and equalize soon
+
+        for i, dt in enumerate(dt_elms):
+            table = [j.getText().strip() for j in dt.find_all("li")[1:]]  # Getting Times
+            times.append(table)
+
+        times = equalizer(times)  # Equalizes length
+        departure_times_backwards = times[:]  # Copies
+
+        r_dict["stops_forwards"] = stops_forwards
+        r_dict["stops_backwards"] = stops_backwards
+        r_dict["departure_times_forwards"] = departure_times_forwards
+        r_dict["departure_times_backwards"] = departure_times_backwards
+
+        logger.info("Reinitializing Route<{}>".format(str(r_dict["code"])))
+        try:
+            logger.debug("Getting route object.")
+            r_obj = models.Route.objects.get(code=r_dict["code"])
+            logger.debug("Found route object. Deleting.")
+            r_obj.delete()
+        except models.Route.DoesNotExist:
+            logger.debug("Route object could not be found.")
+
+        logger.debug("Initializing route object.")
+
+        try:
+            r_obj = models.Route.objects.create(**r_dict)
+        except Exception as e:
+            logger.error("{code} initialization caused an error as... {name}: {msg}".format(
+                code=r_dict["code"],
+                name=e.__class__.__name__,
+                msg=str(e)
+            ))
+            pass

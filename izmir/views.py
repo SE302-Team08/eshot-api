@@ -5,7 +5,7 @@ from rest_framework.versioning import URLPathVersioning
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-import re, redis, json, logging, requests
+import re, redis, json, logging, requests, datetime
 from bs4 import BeautifulSoup
 from random import choice
 
@@ -297,4 +297,60 @@ class RouteSearchView:
 
             serializer = self.serializer(routes, many=True)
 
+            return Response(serializer.data)
+
+class ListAnnouncementsView:
+    class v1(APIView):
+        versioning_class = Versions.v1
+        model = models.Announcement
+        serializer = serializers.ListAnnouncementsSerializer.v1
+
+        def get(self, request, format=FORMAT):
+            """
+            Getting Announcements
+
+            GET
+            official:bool - Only get ESHOT Announcements?
+            """
+
+            is_eshot = request.GET.get("official")
+
+            if is_eshot == "1":
+                # Official Announcements
+                Announcements = self.model.objects.filter(is_eshot=True, expiration__gte=datetime.datetime.now())
+            elif is_eshot == "0":
+                # App Announcements
+                Announcements = self.model.objects.filter(is_eshot=False, expiration__gte=datetime.datetime.now())
+            elif is_eshot is None:
+                # All Announcements
+                Announcements = self.model.objects.filter(expiration__gte=datetime.datetime.now())
+            else:
+                return Response(status=400)
+
+            if len(Announcements) == 0:
+                return Response(status=204)
+
+            serializer = self.serializer(Announcements, many=True)
+            return Response(serializer.data)
+
+class AnnouncementView:
+    class v1(APIView):
+        versioning_class = Versions.v1
+        model = models.Announcement
+        serializer = serializers.AnnouncementSerializer.v1
+
+        def get(self, request, pk, format=FORMAT):
+            """
+            Getting particular announcement.
+
+             PATH
+             pk
+            """
+
+            try:
+                ann_obj = self.model.objects.get(pk=pk)
+            except self.model.DoesNotExist:
+                return Response(status=204)
+
+            serializer = self.serializer(ann_obj)
             return Response(serializer.data)

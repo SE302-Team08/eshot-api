@@ -66,3 +66,25 @@ class StopSearchSerializer:
         class Meta:
             model = models.Stop
             fields = ["code", "label"]
+
+class ListAnnouncementsSerializer:
+    class v1(serializers.ModelSerializer):
+        """
+        All Announcements
+        Version: 1.x
+        """
+
+        class Meta:
+            model = models.Announcement
+            fields = ["pk", "title"]
+
+class AnnouncementSerializer:
+    class v1(serializers.ModelSerializer):
+        """
+        Announcement
+        Version: 1.x
+        """
+
+        class Meta:
+            model = models.Announcement
+            fields = ["title", "content", "is_eshot"]
