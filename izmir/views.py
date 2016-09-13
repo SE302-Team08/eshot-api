@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.conf import settings
 
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer, BrowsableAPIRenderer
 from rest_framework.versioning import URLPathVersioning
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,11 +16,6 @@ from . import serializers
 logger = logging.getLogger(__name__)
 
 FORMAT = None
-
-if settings.DEBUG:
-    pass
-else:
-    FORMAT="json"
 
 class Versions:
     class v1(URLPathVersioning):
@@ -38,15 +34,14 @@ class APIStatusView:
 
         def get(self, request, format=FORMAT):
             data = {
-                "is_api_available": "available",
+                "is_api_available": True,
                 "version": "v1",
-                "expiration": settings.API_EXPIRES["v1"],
-                "messages": []
+                "expiration": settings.API_EXPIRES["v1"]
             }
 
             res = requests.get("http://www.eshot.gov.tr/tr/OtobusumNerede/290")
 
-            data["is_eshot_available"] = "available" if res.status_code == 200 else "unavailable"
+            data["is_eshot_available"] = True if res.status_code == 200 else False
 
             return Response(data)
 
@@ -245,18 +240,17 @@ class RemainingView:
 
 class StopSearchView:
     class v1(APIView):
+        """
+        Searching Stops
+
+        GET
+        q:str - Query String
+        """
         versioning_class = Versions.v1
         model = models.Stop
         serializer = serializers.StopSearchSerializer.v1
 
         def get(self, request, format=FORMAT):
-            """
-            Searching Stops
-
-            GET
-            q:str - Query String
-            """
-
             q = request.GET.get("q")
 
             if q is None:
@@ -273,18 +267,17 @@ class StopSearchView:
 
 class RouteSearchView:
     class v1(APIView):
+        """
+        Searching Routes
+
+        GET
+        q:str - Query String
+        """
         versioning_class = Versions.v1
         model = models.Route
         serializer = serializers.RouteSearchSerializer.v1
 
         def get(self, request, format=FORMAT):
-            """
-            Searching Routes
-
-            GET
-            q:str - Query String
-            """
-
             q = request.GET.get("q")
 
             if q is None:
@@ -301,18 +294,17 @@ class RouteSearchView:
 
 class ListAnnouncementsView:
     class v1(APIView):
+        """
+        Getting Announcements
+
+        GET
+        official:bool - Only get ESHOT Announcements?
+        """
         versioning_class = Versions.v1
         model = models.Announcement
         serializer = serializers.ListAnnouncementsSerializer.v1
 
         def get(self, request, format=FORMAT):
-            """
-            Getting Announcements
-
-            GET
-            official:bool - Only get ESHOT Announcements?
-            """
-
             is_eshot = request.GET.get("official")
 
             if is_eshot == "1":
@@ -335,18 +327,18 @@ class ListAnnouncementsView:
 
 class AnnouncementView:
     class v1(APIView):
+        """
+        Getting particular announcement.
+
+         PATH
+         pk
+        """
+
         versioning_class = Versions.v1
         model = models.Announcement
         serializer = serializers.AnnouncementSerializer.v1
 
         def get(self, request, pk, format=FORMAT):
-            """
-            Getting particular announcement.
-
-             PATH
-             pk
-            """
-
             try:
                 ann_obj = self.model.objects.get(pk=pk)
             except self.model.DoesNotExist:
