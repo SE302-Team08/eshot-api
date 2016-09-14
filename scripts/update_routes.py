@@ -173,7 +173,6 @@ def run():
         logger.debug("Handling departure times.")
         dt_elms = soup\
             .find_all("ul", {"class": "timescape"})
-        print(len(dt_elms))
         times = list()  # Created to organize and equalize soon
 
         for i, dt in enumerate(dt_elms):

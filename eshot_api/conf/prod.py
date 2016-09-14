@@ -87,6 +87,9 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning'
 }
 
+# CORS Headers
+CORS_ORIGIN_ALLOW_ALL = True
+
 ################
 # Special Conf #
 ################
