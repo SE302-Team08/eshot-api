@@ -49,7 +49,9 @@ def run():
 
         try:
             ann_obj = Announcement.objects.get(title=title, content=content)
-            logger.warn("Announcement already found in database, passing...")
+            logger.warn("Announcement already found in database, updating...")
+            ann_obj.expiration = datetime(today.year, today.month, today.day, 23, 59, 59)
+            ann_obj.save()
             continue
         except Announcement.DoesNotExist:
             logger.info("Initializing announcement...")

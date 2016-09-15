@@ -74,7 +74,7 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'scripts.update_routes_2': {
+        'scripts.update_announcements': {
             'handlers': ['streamer', 'mirror', 'tracker'],
             'level': 'DEBUG',
             'propagate': True,
