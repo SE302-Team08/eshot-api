@@ -9,4 +9,4 @@
 It is a restful service which provides recorded and real-time information
 about routes and stops of İzmir Public Transportation Service (aka ESHOT).
 
-Currently has no servers or wiki.
+[Server](http://erayerdin.me:1900/docs)
